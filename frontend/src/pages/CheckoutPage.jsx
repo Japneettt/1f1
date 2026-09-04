@@ -1,126 +1,80 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { getProductBySlug } from "../api/productApi";
-import VariantSelector from "../components/VariantSelector";
-import EMIPlanList from "../components/EMIPlanList";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 
-export default function ProductPage() {
-  const { slug } = useParams();
+export default function CheckoutPage() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [planError, setPlanError] = useState("");
+  const { product, variant, plan } = location.state || {};
 
-  useEffect(() => {
-    getProductBySlug(slug)
-      .then((data) => {
-        setProduct(data);
-        setSelectedVariant(data.variants?.[0] || null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [slug]);
+  if (!product || !variant || !plan) {
+    return (
+      <div className="max-w-xl mx-auto p-6 text-center mt-10">
+        <p className="text-gray-600">No order details found.</p>
+        <Link to="/" className="text-blue-600 underline mt-2 inline-block">
+          Go back to shop
+        </Link>
+      </div>
+    );
+  }
 
-  const handleVariantSelect = (variant) => {
-    setSelectedVariant(variant);
-    setSelectedPlan(null);
-    setPlanError("");
+  const handlePay = () => {
+    alert("This is a demo checkout — payment integration not implemented.");
   };
-
-  const handlePlanSelect = (plan) => {
-    setSelectedPlan(plan);
-    setPlanError("");
-  };
-
-  const handleProceed = () => {
-    if (!selectedPlan) {
-      setPlanError("Please select an EMI plan first.");
-      return;
-    }
-    navigate("/checkout", {
-      state: { product, variant: selectedVariant, plan: selectedPlan }
-    });
-  };
-
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
-  if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
-  if (!product) return <p className="text-center mt-10">Product not found</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <p className="text-xs text-gray-400 mb-4">
-        Shop on EMI &gt; Smart Phones &gt; {product.brand} &gt;{" "}
-        <span className="text-gray-600">{product.name}</span>
-      </p>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Confirm & Pay</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white rounded-xl shadow p-6">
-          <span className="text-xs text-red-500 font-semibold">NEW</span>
-          <h1 className="text-2xl font-bold">{product.name}</h1>
-          <p className="text-gray-500 mb-4">{selectedVariant?.storage}</p>
+      <div className="bg-white rounded-xl shadow p-6 mb-6">
+        <div className="flex gap-4">
           <img
-            src={selectedVariant?.image}
+            src={variant.image}
             alt={product.name}
-            className="w-full h-64 object-contain"
+            className="w-20 h-20 object-contain"
           />
-          <VariantSelector
-            variants={product.variants}
-            selectedVariant={selectedVariant}
-            onSelect={handleVariantSelect}
-          />
-
-          {product.description && (
-            <p className="text-sm text-gray-600 mt-4">{product.description}</p>
-          )}
-
-          {product.specs && Object.keys(product.specs).length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-semibold mb-2">Product Details</h3>
-              <ul className="text-sm text-gray-700 space-y-1">
-                {Object.entries(product.specs).map(([key, value]) => (
-                  <li key={key}>
-                    <span className="font-medium">{key}:</span> {value}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div className="mb-4">
-            <p className="text-2xl font-bold">
-              ₹{Number(selectedVariant?.price).toLocaleString("en-IN")}
+          <div>
+            <h2 className="font-semibold">{product.name}</h2>
+            <p className="text-sm text-gray-500">
+              {variant.storage} {variant.color ? `- ${variant.color}` : ""}
             </p>
-            {Number(selectedVariant?.mrp) > Number(selectedVariant?.price) && (
-              <p className="text-gray-400 line-through">
-                ₹{Number(selectedVariant?.mrp).toLocaleString("en-IN")}
-              </p>
-            )}
-            <p className="text-sm text-gray-600 mt-1">EMI plans backed by mutual funds</p>
+            <p className="font-bold mt-1">
+              ₹{Number(variant.price).toLocaleString("en-IN")}
+            </p>
           </div>
-
-          <EMIPlanList
-            plans={selectedVariant?.emiPlans || []}
-            selectedPlan={selectedPlan}
-            onSelect={handlePlanSelect}
-          />
-
-          {planError && (
-            <p className="text-sm text-red-600 mt-2">{planError}</p>
-          )}
-
-          <button
-            onClick={handleProceed}
-            className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
-          >
-            Proceed with Selected Plan
-          </button>
         </div>
       </div>
+
+      <div className="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 className="font-semibold mb-3">Selected EMI Plan</h3>
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="font-semibold">
+              ₹{Number(plan.monthlyAmount).toLocaleString("en-IN")} x {plan.tenureMonths} months
+            </p>
+            {Number(plan.cashback) > 0 && (
+              <p className="text-sm text-green-600">
+                Additional cashback of ₹{Number(plan.cashback).toLocaleString("en-IN")}
+              </p>
+            )}
+          </div>
+          <span className="text-sm text-gray-600">
+            {Number(plan.interestRate) === 0 ? "0% interest" : `${plan.interestRate}% interest`}
+          </span>
+        </div>
+      </div>
+
+      <button
+        onClick={handlePay}
+        className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700"
+      >
+        Pay & Confirm Order
+      </button>
+
+      <button
+        onClick={() => navigate(-1)}
+        className="w-full mt-3 text-gray-600 py-2 text-sm underline"
+      >
+        Go back
+      </button>
     </div>
   );
 }
